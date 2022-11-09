@@ -1,4 +1,5 @@
 import logging
+import yaml
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -26,54 +27,63 @@ admins_id = [
 @dp.message_handler(commands=['start'])
 async def start(message: types.Message):
     if message.chat.type == 'private':
-        if not db.user_exist(message.from_user.id):
-            db.add_user(message.from_user.id)
-        keyboard_menu = ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text='playlists')]], resize_keyboard=True
-        )
-        await message.answer(f'Вітаю {message.from_user.full_name}', reply_markup=keyboard_menu)
+        with open('messages.yaml', 'r', encoding="utf-8") as info:
+            messages = yaml.load(info, Loader=yaml.FullLoader)
+            if not db.user_exist(message.from_user.id):
+                db.add_user(message.from_user.id)
+            button_for_mailings_tracks = types.InlineKeyboardMarkup(row_width=1)
+            button = types.InlineKeyboardButton(messages['Hello']['button'], messages['Hello']['url'])
+            button_for_mailings_tracks.add(button)
+            keyboard_menu = ReplyKeyboardMarkup(
+                keyboard=[
+                    [KeyboardButton(text=messages['B_playlists'])],
+                    [KeyboardButton(text=messages['B_news'])]
+                ], resize_keyboard=True
+            )
+            await message.answer(f'{messages["Hello"]["hi"]}, {message.from_user.full_name}', reply_markup=keyboard_menu)
+            await message.answer(
+                f'{messages["Hello"]["text"]}',
+                reply_markup=button_for_mailings_tracks
+            )
 
 
-# after pushing button 'playlists'
-@dp.message_handler(text=['playlists'])
+# after pushing button 'Плэйлісты'
+@dp.message_handler(text=['Плэйлісты'])
 async def start(message: types.Message):
-    in_keyboard = InlineKeyboardMarkup(
-        row_width=1,
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text='name_of_playlist',
-                    url='https://open.spotify.com/track/07J5gvVBcXUPcsa9KVYwHu?si=68da09977e8c40c3'
-                )
-            ]
-        ]
-    )
-    await message.answer('Глянь, якія плэйлісты мы табе сабралі', reply_markup=in_keyboard)
+    with open('playlists.yaml', 'r', encoding="utf-8") as name_of_playlists:
+        dict_names_of_buttons = yaml.load(name_of_playlists, Loader=yaml.FullLoader)
+        buttons = []
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        for name_of_button, info in dict_names_of_buttons.items():
+            if 'url' in info:
+                buttons.append(types.InlineKeyboardButton(name_of_button, info['url']))
+        markup.add(*buttons)
+        photo = open(f'inflames+group_3.jpg', 'rb')
+        await message.answer_photo(
+            photo=photo,
+            caption='Глянь, якія плэйлісты мы табе сабралі',
+            reply_markup=markup
+        )
 
 
-async def set_default_commands(dp):
-    await dp.bot.set_my_commands([
-        types.BotCommand('start', 'Уключыць бота'),
-        types.BotCommand('help', 'Дапамога'),
-    ])
+# after pushing button 'Навіны'
+@dp.message_handler(text=['Навіны'])
+async def news(message: types.Message):
+    with open('messages.yaml', 'r', encoding="utf-8") as messages:
+        dict_of_messages = yaml.load(messages, Loader=yaml.FullLoader)
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        print(dict_of_messages["News"]["button"])
+        button = types.InlineKeyboardButton(
+            dict_of_messages["News"]["button"],
+            dict_of_messages["News"]["url"]
+        )
+        markup = markup.add(button)
+        await message.answer(dict_of_messages["News"]["news"], reply_markup=markup)
 
 
-@dp.message_handler(text='/help')
-async def command_help(message: types.Message):
-    await message.answer(f'Вітаю {message.from_user.full_name}! \n'
-                         f'Табе патрэбна дапамога?')
 
 
-async def on_startup_notify(dp: Dispatcher):
-    for admin in admins_id:
-        try:
-            text = 'Бот уключаны'
-            await dp.bot.send_message(chat_id=admin, text=text)
-        except Exception as err:
-            logging.exception(err)
-
-
+#######################################################################################
 # admin side/ mailing
 class BotMailing(StatesGroup):
     text = State()
