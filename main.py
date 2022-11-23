@@ -58,7 +58,7 @@ async def start(message: types.Message):
             if 'url' in info:
                 buttons.append(types.InlineKeyboardButton(name_of_button, info['url']))
         markup.add(*buttons)
-        photo = open(f'inflames+group_3.jpg', 'rb')
+        photo = open(f'playlists.JPG', 'rb')
         await message.answer_photo(
             photo=photo,
             caption='Глянь, якія плэйлісты мы табе сабралі',
@@ -78,7 +78,12 @@ async def news(message: types.Message):
             dict_of_messages["News"]["url"]
         )
         markup = markup.add(button)
-        await message.answer(dict_of_messages["News"]["news"], reply_markup=markup)
+        photo = open(f'news.JPG', 'rb')
+        await message.answer_photo(
+            photo=photo,
+            caption=dict_of_messages["News"]["news"],
+            reply_markup=markup
+        )
 
 
 
